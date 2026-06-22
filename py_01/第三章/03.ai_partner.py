@@ -12,13 +12,13 @@ st.logo("./resource/logo.png")
 st.title("AI智能伴侣")
 
 role = "你的名字叫飞姐，请用高冷御姐类型回答问题"
+#创建与AI大模型交互的客户端对象
+client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'),base_url="https://api.deepseek.com")
 prompt = st.chat_input('请输入您要问得问题')
 
 if prompt:
     st.chat_message("user").write(prompt)
-    client = OpenAI(
-        api_key=os.environ.get('DEEPSEEK_API_KEY'),
-        base_url="https://api.deepseek.com")
+
 
     response = client.chat.completions.create(
         model="deepseek-v4-pro",
