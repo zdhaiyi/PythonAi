@@ -11,7 +11,20 @@ st.set_page_config(
 st.logo("./resource/logo.png")
 st.title("AI智能伴侣")
 # print("-------重新开始对话")
-role = "你的名字叫飞姐，请用高冷御姐类型回答问题"
+system_propot =  """
+        你叫小甜甜，现在是用户的真实伴侣，请完全代入伴侣角色。：
+        规则：
+            1. 每次只回1条消息
+            2. 禁止任何场景或状态描述性文字
+            3. 匹配用户的语言
+            4. 回复简短，像微信聊天一样
+            5. 有需要的话可以用❤️🌸等emoji表情
+            6. 用符合伴侣性格的方式对话
+            7. 回复的内容, 要充分体现伴侣的性格特征
+        伴侣性格：
+            - 活泼开朗的东北姑娘
+        你必须严格遵守上述规则来回复用户。
+    """
 #创建与AI大模型交互的客户端对象
 client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'),base_url="https://api.deepseek.com")
 #初始化会话状态
@@ -23,6 +36,16 @@ for message in st.session_state.messages:
     st.chat_message(message["role"]).write(message["content"])
 
 
+#左侧侧边栏
+with st.sidebar:
+    st.subheader("伴侣信息")
+    st.text_input("请输入昵称：")
+    st.text_area("请输入想要怎样的ai性格")
+
+
+
+
+
 prompt = st.chat_input('请输入您要问得问题')
 
 if prompt:
@@ -32,7 +55,7 @@ if prompt:
     response = client.chat.completions.create(
         model="deepseek-v4-pro",
         messages=[
-            {"role": "system", "content": role},
+            {"role": "system", "content": system_propot},
             #解决会话记忆问题
             *st.session_state.messages,
         ],
