@@ -11,8 +11,21 @@ st.set_page_config(
 st.logo("./resource/logo.png")
 st.title("AI智能伴侣")
 # print("-------重新开始对话")
-system_propot =  """
-        你叫小甜甜，现在是用户的真实伴侣，请完全代入伴侣角色。：
+
+#创建与AI大模型交互的客户端对象
+client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'),base_url="https://api.deepseek.com")
+#初始化会话状态
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+#存储用户修改的ai名字和性格
+if "ai_name" not in st.session_state:
+    st.session_state.ai_name = "小甜甜"
+if "ai_character" not in st.session_state:
+    st.session_state.ai_character = "活泼开朗的东北姑娘"
+
+system_propot =  f"""
+        你叫%s，现在是用户的真实伴侣，请完全代入伴侣角色。：
         规则：
             1. 每次只回1条消息
             2. 禁止任何场景或状态描述性文字
@@ -22,14 +35,10 @@ system_propot =  """
             6. 用符合伴侣性格的方式对话
             7. 回复的内容, 要充分体现伴侣的性格特征
         伴侣性格：
-            - 活泼开朗的东北姑娘
+            - %s
         你必须严格遵守上述规则来回复用户。
     """
-#创建与AI大模型交互的客户端对象
-client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'),base_url="https://api.deepseek.com")
-#初始化会话状态
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+
 #展示ai与用户会话状态存储
 for message in st.session_state.messages:
     print(message,"-------会话状态")
@@ -39,8 +48,8 @@ for message in st.session_state.messages:
 #左侧侧边栏
 with st.sidebar:
     st.subheader("伴侣信息")
-    st.text_input("请输入昵称：")
-    st.text_area("请输入想要怎样的ai性格")
+    st.text_input("名字",placeholder = "请输入伴侣名字",key="ai_name")
+    st.text_area("性格",placeholder = "请输入伴侣性格",key="ai_character")
 
 
 
@@ -55,7 +64,7 @@ if prompt:
     response = client.chat.completions.create(
         model="deepseek-v4-pro",
         messages=[
-            {"role": "system", "content": system_propot},
+            {"role": "system", "content": system_propot % (st.session_state.ai_name, st.session_state.ai_character)},
             #解决会话记忆问题
             *st.session_state.messages,
         ],
