@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from openai import OpenAI
+from datetime import datetime
 st.set_page_config(
     page_title="AI智能伴侣",
     page_icon="👽",
@@ -9,7 +10,7 @@ st.set_page_config(
     menu_items={}
 )
 st.logo("./resource/logo.png")
-st.title("AI智能伴侣")
+st.title("AI控制面板")
 # print("-------重新开始对话")
 
 #创建与AI大模型交互的客户端对象
@@ -23,6 +24,11 @@ if "ai_name" not in st.session_state:
     st.session_state.ai_name = "小甜甜"
 if "ai_character" not in st.session_state:
     st.session_state.ai_character = "活泼开朗的东北姑娘"
+
+#会话标识
+if "identification" not in st.session_state:
+    st.session_state.identification = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 system_propot =  f"""
         你叫%s，现在是用户的真实伴侣，请完全代入伴侣角色。：
