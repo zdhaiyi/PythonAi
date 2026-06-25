@@ -2,6 +2,8 @@ import streamlit as st
 import os
 from openai import OpenAI
 from datetime import datetime
+import json
+
 st.set_page_config(
     page_title="AI智能伴侣",
     page_icon="👽",
@@ -11,7 +13,27 @@ st.set_page_config(
 )
 st.logo("./resource/logo.png")
 st.title("AI控制面板")
-# print("-------重新开始对话")
+
+#保存会话方法
+def save_session():
+    #判断当前会话是否有内容
+    # if not st.session_state.messages:
+    #     return
+    if st.session_state.identification:
+        # 构建会话对象
+        session_data = {
+            "identification": st.session_state.identification,  # 创建时间
+            "messages": st.session_state.messages,  # 会话内容
+            "ai_name": st.session_state.ai_name,  # 伴侣名字
+            "ai_character": st.session_state.ai_character  # 伴侣性格
+        }
+        # 判断是否有创建保存会话目录sessions
+        if not os.path.exists("sessions"):
+            os.makedirs("sessions")
+
+        with open(f"sessions/{st.session_state.identification}.json", "w", encoding="utf-8") as f:
+            json.dump(session_data, f, ensure_ascii=False, indent=2)
+
 
 #创建与AI大模型交互的客户端对象
 client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'),base_url="https://api.deepseek.com")
@@ -27,7 +49,7 @@ if "ai_character" not in st.session_state:
 
 #会话标识
 if "identification" not in st.session_state:
-    st.session_state.identification = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state.identification = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 system_propot =  f"""
@@ -53,9 +75,20 @@ for message in st.session_state.messages:
 
 #左侧侧边栏
 with st.sidebar:
+    #会话数据存储
+    st.subheader("AI控制面板")
+    if st.button("创建会话",width="stretch",icon="🚀"):
+        # 1.保存当前会话数据
+        save_session()
+        # 2.创建会话
+
+
+
+    #伴侣信息
     st.subheader("伴侣信息")
     st.text_input("名字",placeholder = "请输入伴侣名字",key="ai_name")
     st.text_area("性格",placeholder = "请输入伴侣性格",key="ai_character")
+
 
 
 
