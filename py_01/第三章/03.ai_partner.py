@@ -14,12 +14,12 @@ st.set_page_config(
 st.logo("./resource/logo.png")
 st.title("AI控制面板")
 
+# 创建会话标识
+def create_identification():
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 #保存会话方法
 def save_session():
-    #判断当前会话是否有内容
-    # if not st.session_state.messages:
-    #     return
-    if st.session_state.identification:
+    if st.session_state.identification and st.session_state.messages:
         # 构建会话对象
         session_data = {
             "identification": st.session_state.identification,  # 创建时间
@@ -49,7 +49,7 @@ if "ai_character" not in st.session_state:
 
 #会话标识
 if "identification" not in st.session_state:
-    st.session_state.identification = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    st.session_state.identification = create_identification()
 
 
 system_propot =  f"""
@@ -80,8 +80,13 @@ with st.sidebar:
     if st.button("创建会话",width="stretch",icon="🚀"):
         # 1.保存当前会话数据
         save_session()
-        # 2.创建会话
-
+        # 2.新建会话
+        if st.session_state.messages:
+            st.session_state.messages = []
+            st.session_state.identification = create_identification()
+            save_session()
+            #重新渲染页面
+            st.rerun()
 
 
     #伴侣信息
