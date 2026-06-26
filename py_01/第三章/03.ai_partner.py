@@ -34,12 +34,29 @@ def save_session():
         with open(f"sessions/{st.session_state.identification}.json", "w", encoding="utf-8") as f:
             json.dump(session_data, f, ensure_ascii=False, indent=2)
 
+#加载会话文件
+def load_session():
+    conversation_list = []
+    if os.path.exists("sessions"):
+        files = os.listdir("sessions")
+        for file in files:
+            if file.endswith(".json"):
+                conversation_list.append(file[:-5])
+    return conversation_list
+
+
+
+
 
 #创建与AI大模型交互的客户端对象
 client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'),base_url="https://api.deepseek.com")
 #初始化会话状态
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+
+
+
 
 #存储用户修改的ai名字和性格
 if "ai_name" not in st.session_state:
@@ -87,6 +104,10 @@ with st.sidebar:
             save_session()
             #重新渲染页面
             st.rerun()
+
+    st.text("历史会话")
+    load_session()
+
 
 
     #伴侣信息
