@@ -12,7 +12,8 @@ st.set_page_config(
     menu_items={}
 )
 st.logo("./resource/logo.png")
-st.title("AI控制面板")
+st.title("AI智能伴侣")
+
 
 # 创建会话标识
 def create_identification():
@@ -34,6 +35,7 @@ def save_session():
         with open(f"sessions/{st.session_state.identification}.json", "w", encoding="utf-8") as f:
             json.dump(session_data, f, ensure_ascii=False, indent=2)
 
+
 #加载会话文件
 def load_session():
     conversation_list = []
@@ -42,10 +44,33 @@ def load_session():
         for file in files:
             if file.endswith(".json"):
                 conversation_list.append(file[:-5])
+    conversation_list.sort(reverse=True)
     return conversation_list
 
+#加载当前会话
+def load_session_current(conversation):
+    #判断是否有这个会话文件
+    try:
+        if os.path.exists(f"sessions/{conversation}.json"):
+            with open(f"sessions/{conversation}.json", "r", encoding="utf-8") as f:
+                session_data = json.load(f)
+                st.session_state.identification = conversation
+                st.session_state.messages = session_data["messages"]
+                st.session_state.ai_name = session_data["ai_name"]
+                st.session_state.ai_character = session_data["ai_character"]
+    except Exception:
+        st.error("会话文件不存在")
 
-
+#删除当前会话
+def dele_session_current(conversation):
+    try:
+        if os.path.exists(f"sessions/{conversation}.json"):
+            os.remove(f"sessions/{conversation}.json")
+            if conversation == st.session_state.identification:
+                st.session_state.identification = create_identification()
+                st.session_state.messages = []
+    except Exception:
+        st.error("会话文件删除失败")
 
 
 #创建与AI大模型交互的客户端对象
@@ -83,7 +108,8 @@ system_propot =  f"""
             - %s
         你必须严格遵守上述规则来回复用户。
     """
-
+#展示当前会话名称
+st.text(st.session_state.identification)
 #展示ai与用户会话状态存储
 for message in st.session_state.messages:
     print(message,"-------会话状态")
@@ -106,10 +132,24 @@ with st.sidebar:
             st.rerun()
 
     st.text("历史会话")
-    load_session()
+    for conversation in load_session():
+        col1, col2 = st.columns([4,1])
+        with col1:
+            #使用三元运算符使选中的按钮更显眼
+           if st.button(conversation, width="stretch", icon="🗒️", key=f"load_{conversation}", type="primary" if conversation == st.session_state.identification else "secondary"):
+                #加载会话
+                load_session_current(conversation)
+                # 重新渲染页面
+                st.rerun()
+        with col2:
+           if st.button("", width="stretch", icon="❌", key=f"delete_{conversation}"):
+               #删除会话
+               dele_session_current(conversation)
+               # 重新渲染页面
+               st.rerun()
 
-
-
+     #分割线
+    st.markdown("___")
     #伴侣信息
     st.subheader("伴侣信息")
     st.text_input("名字",placeholder = "请输入伴侣名字",key="ai_name")
@@ -146,7 +186,9 @@ if prompt:
         full_response = st.write_stream(response_gen)
     # 循环结束后一次性存入会话状态
     st.session_state.messages.append({"role": "assistant", "content": full_response})
-
+    # 保存会话数据
+    save_session()
+    st.rerun()
 
 
 
