@@ -20,17 +20,17 @@ from lxml import html
 #常量
 TMDB_BASE_URL = "https://www.themoviedb.org"
 TMDB_TOP_URL = "https://www.themoviedb.org/movie/top-rated"
-
-#获取详细页面数据
+TMDB_TOP_PAGE = "https://www.themoviedb.org/discover/movie/items"
 def get_movie_info(url):
     response = requests.get(url,timeout=60)
     docment_info = html.fromstring(response.text)
     movie_name = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[1]/h2/a/text()") # 电影名称
     movie_years = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[1]/h2/span/text()") # 年份
-    movie_data = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[1]/div/span[2]/text()") # 上映时间
-    movie_type = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[1]/div/span[3]/a/text()") # 类型
+    movie_data = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[1]/div/span[@class='release']/text()") # 上映时间
+    movie_type = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[1]/div/span[@class='genres']/a/text()") # 类型
     movie_duration = docment_info.xpath("//*[@id='consensus_pill']/div/div[1]/div/div/@data-percent") # 时长
-    movie_language = docment_info.xpath("//*[@id='media_v4']/div/div/div[2]/div/section/div[1]/div/section[1]/p[3]/text()") # 语言
+    has_class = docment_info.xpath("//*[@id='media_v4']/div/div/div[2]/div/section/div[1]/div/section[1]/p[@class]")
+    movie_language = docment_info.xpath(f"//*[@id='media_v4']/div/div/div[2]/div/section/div[1]/div/section[1]/p[{3 if has_class else 2}]/text()") # 语言
     movie_director = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[3]/ol/li[1]/p[1]/a/text()") # 导演
     movie_writer = docment_info.xpath("//*[@id='original_header']/div[2]/section/div[3]/ol/li[2]/p[1]/a/text()")    # 作者
     movie_cast = docment_info.xpath("//*[@id='cast_scroller']/ol/li[1]/p[1]/a/text()")  # 主演
@@ -40,8 +40,8 @@ def get_movie_info(url):
     #保存为字典类型并返回
     movie_info = {
         "电影名称": movie_name[0].strip() if movie_name else '',
-        "年份": movie_years[0].strip() if movie_name else '',
-        "上映时间": movie_data[0].strip() if movie_name else '',
+        "年份": movie_years[0].strip() if movie_years else '',
+        "上映时间": movie_data[0].strip() if movie_data else '',
         "类型": ",".join(movie_type) if movie_type else '',
         "时长": movie_duration[0].strip() if movie_duration else '',
         "语言": movie_language[0].strip() if movie_language else '',
@@ -65,21 +65,36 @@ def save_all_moveies(all_movies):
         writer.writerows(all_movies)
 
 def main():
-    #发送请求，获取页面数据
-    response = requests.get(TMDB_TOP_URL,timeout=60)
-    docment = html.fromstring(response.text)
-    #解析数据
-    movie_list = docment.xpath("/html/body/div[1]/main/section/div/div/div/div[2]/div[2]/div/section/div/div/div[1]/div/div")
-    #遍历电影列表，获取每一部电影的详情信息
     all_movies = []
-    for movie in movie_list:
-        movie_urls = movie.xpath("./div/div/a/@href")
-        if movie_urls:
-            movie_info_url = TMDB_BASE_URL + movie_urls[0]
-            #发送请求，获取电影详情页面数据，
-            movie_info = get_movie_info(movie_info_url)
-            all_movies.append(movie_info)
-    #保存数据，保存为csv文件
+    for page_num in range(1,6):
+        # 发送请求，获取页面数据
+        if page_num == 1:
+            response = requests.get(TMDB_TOP_URL, timeout=60)
+        else:
+            response = requests.post(TMDB_TOP_PAGE, f"air_date.gte=&air_date.lte=&certification=&certification_country=CN&debug=&first_air_date.gte=&first_air_date.lte=&include_adult=false&include_softcore=false&latest_ceremony.gte=&latest_ceremony.lte=&page={page_num}&primary_release_date.gte=&primary_release_date.lte=&region=&release_date.gte=&release_date.lte=2027-01-01&show_me=everything&sort_by=vote_average.desc&vote_average.gte=0&vote_average.lte=10&vote_count.gte=300&watch_region=CN&with_genres=&with_keywords=&with_networks=&with_origin_country=&with_original_language=&with_watch_monetization_types=&with_watch_providers=&with_release_type=&with_runtime.gte=0&with_runtime.lte=400", timeout=60)
+        response.raise_for_status()
+        docment = html.fromstring(response.text)
+        movie_links = docment.xpath("//a[contains(@href, '/movie/')]/@href")
+        movie_links = list(dict.fromkeys(movie_links))
+
+        print(f"找到 {len(movie_links)} 部电影链接")
+
+        for link in movie_links:
+            if '/movie/' not in link:
+                continue
+            movie_info_url = TMDB_BASE_URL + link
+            try:
+                movie_info = get_movie_info(movie_info_url)
+                if movie_info["电影名称"]:
+                    all_movies.append(movie_info)
+            except Exception as e:
+                print(f"  获取失败: {movie_info_url}, 错误: {e}")
+                continue
+
+        print(f"  当前已获取 {len(all_movies)} 部电影数据")
+
+    print(f"\n总共获取 {len(all_movies)} 部电影数据")
     save_all_moveies(all_movies)
+    print("数据已保存到 ./csv_data/movies.csv")
 if __name__ == '__main__':
     main()
